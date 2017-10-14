@@ -1,7 +1,6 @@
 $(document).ready(function(){
 $('.btn').attr('disabled',true);
 $('.picknick2').css('visibility', 'hidden');
-$('.picknick3').css('visibility', 'hidden');
 	
 	$('#connect\\:nick').keyup(function(){
 
