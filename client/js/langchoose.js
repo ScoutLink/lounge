@@ -72,7 +72,7 @@ window.onload = function()
 	}
 
 	// Choose a random nick
-	document.getElementById('connect:nick').value = 'Chat_Guest_' + Math.floor((Math.random() * 99999) + 9999);
+//	document.getElementById('connect:nick').value = 'Chat_Guest_' + Math.floor((Math.random() * 99999) + 9999);
 
 	// Output channel to dropdown
 	document.getElementById("connect:channels").value = channel;
