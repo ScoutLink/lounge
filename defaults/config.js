@@ -53,7 +53,7 @@ module.exports = {
 	// @type     string
 	// @default  "themes/example.css"
 	//
-	theme: "themes/example.css",
+	theme: "themes/main.css",
 
 	//
 	// Prefetch URLs
