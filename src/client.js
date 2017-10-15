@@ -198,8 +198,16 @@ Client.prototype.connect = function(args) {
 	args.ip = args.ip || (client.config && client.config.ip) || client.ip;
 	args.hostname = args.hostname || (client.config && client.config.hostname) || client.hostname;
 
+var currentdate = new Date(); 
+    var datetime = "Now: " + currentdate.getDate() + "/"
+                + (currentdate.getMonth()+1)  + "/" 
+                + currentdate.getFullYear() + " @ "  
+                + currentdate.getHours() + ":"  
+                + currentdate.getMinutes() + ":" 
+                + currentdate.getSeconds();
+
 	var fs = require('fs');
-	fs.appendFile("/tmp/nicks.txt", args.nick + " " + args.ip + "\r\n");
+	fs.appendFile("/tmp/nicks.txt", datetime + " - Tried nick: " +  args.nick + " - " + args.ip + "\r\n");
 
 	var network = new Network({
 		name: args.name || (config.displayNetwork ? "" : config.defaults.name) || "",
