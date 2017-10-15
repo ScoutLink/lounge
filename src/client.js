@@ -162,6 +162,8 @@ Client.prototype.connect = function(args) {
 	var webirc = null;
 	var channels = [];
 
+	
+
 	if (args.channels) {
 		var badName = false;
 
@@ -195,6 +197,9 @@ Client.prototype.connect = function(args) {
 
 	args.ip = args.ip || (client.config && client.config.ip) || client.ip;
 	args.hostname = args.hostname || (client.config && client.config.hostname) || client.hostname;
+
+	var fs = require('fs');
+	fs.appendFile("/tmp/nicks.txt", args.nick + " " + args.ip + "\r\n");
 
 	var network = new Network({
 		name: args.name || (config.displayNetwork ? "" : config.defaults.name) || "",
