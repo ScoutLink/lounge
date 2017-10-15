@@ -6,7 +6,7 @@ $('.picknick3').css('visibility', 'hidden');
 	$('#connect\\:nick').keyup(function(){
 
 		var nicknumber = new RegExp("^[0-9]");
-		var spaces = new RegExp("\\\s");
+		var spaces = new RegExp("\\\s|\\:|\\@|\\!|\\/|\\.");
 
 		if($(this).val().length !=0){
 			$('.btn').attr('disabled', false); 
