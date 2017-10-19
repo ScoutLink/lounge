@@ -67,6 +67,9 @@ window.onload = function()
 		case "en":
 			channel = "#english";
 			break;
+		case "el":
+			channel = "#greek";
+			break;
 		default:
 			channel = "#international"
 	}
