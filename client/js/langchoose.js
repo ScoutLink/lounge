@@ -31,9 +31,9 @@ window.onload = function()
 		case "pl":
 			channel = "#polish";
 			break;
-		case "it":
-			channel = "#italiano";
-			break;
+		// case "it":
+		// 	channel = "#italiano";
+		// 	break;
 		case "hr":
 			channel = "#croatian";
 			break;
@@ -80,4 +80,3 @@ window.onload = function()
 	// Output channel to dropdown
 	document.getElementById("connect:channels").value = channel;
 }
-
