@@ -5,7 +5,7 @@ $(document).ready(function () {
 
 	$('#connect\\:nick').keyup(function () {
 		var nicknumber = new RegExp("^[0-9]");
-		var spaces = new RegExp("\\\s|\\:|\\@|\\!|\\/|\\.");
+		var spaces = new RegExp("\\\s|\\:|\\@|\\!|\\/|\\.\\*");
 
 		// TODO: Refactor
 		if ($(this).val().length != 0) {
