@@ -1,6 +1,6 @@
 "use strict";
 
-var Msg = require("../../models/msg");
+const Msg = require("../../models/msg");
 
 exports.commands = ["nick"];
 exports.allowDisconnected = true;
@@ -9,7 +9,7 @@ exports.input = function(network, chan, cmd, args) {
 	if (args.length === 0) {
 		chan.pushMessage(this, new Msg({
 			type: Msg.Type.ERROR,
-			text: "Usage: /nick <your new nick>"
+			text: "Usage: /nick <your new nick>",
 		}));
 		return;
 	}
@@ -17,12 +17,12 @@ exports.input = function(network, chan, cmd, args) {
 	if (args.length !== 1) {
 		chan.pushMessage(this, new Msg({
 			type: Msg.Type.ERROR,
-			text: "Nicknames may not contain spaces."
+			text: "Nicknames may not contain spaces.",
 		}));
 		return;
 	}
 
-	var newNick = args[0];
+	const newNick = args[0];
 
 	// If connected to IRC, send to server and wait for ACK
 	// otherwise update the nick and UI straight away
@@ -32,8 +32,8 @@ exports.input = function(network, chan, cmd, args) {
 		network.setNick(newNick);
 
 		this.emit("nick", {
-			network: network.id,
-			nick: newNick
+			network: network.uuid,
+			nick: newNick,
 		});
 	}
 };

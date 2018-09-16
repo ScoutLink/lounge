@@ -1,13 +1,31 @@
 "use strict";
 
+const log = require("../src/log");
 const Helper = require("../src/helper");
 const expect = require("chai").expect;
 const request = require("request");
 const io = require("socket.io-client");
 
-describe("Server", () => {
-	const server = require("../src/server");
-	server();
+describe("Server", function() {
+	// Travis is having issues with slow workers and thus tests timeout
+	this.timeout(process.env.CI ? 25000 : 5000);
+
+	let server;
+	let originalLogInfo;
+
+	before(function() {
+		originalLogInfo = log.info;
+
+		log.info = () => {};
+
+		server = require("../src/server")();
+	});
+
+	after(function(done) {
+		server.close(done);
+
+		log.info = originalLogInfo;
+	});
 
 	const webURL = `http://${Helper.config.host}:${Helper.config.port}/`;
 
@@ -16,7 +34,7 @@ describe("Server", () => {
 			request(webURL, (error, response, body) => {
 				expect(error).to.be.null;
 				expect(body).to.include("<title>The Lounge</title>");
-				expect(body).to.include("https://thelounge.github.io/");
+				expect(body).to.include("js/bundle.js");
 
 				done();
 			});
@@ -34,8 +52,15 @@ describe("Server", () => {
 		});
 	});
 
-	describe("WebSockets", () => {
+	describe("WebSockets", function() {
+		this.slow(300);
+
 		let client;
+
+		before((done) => {
+			Helper.config.public = true;
+			done();
+		});
 
 		beforeEach(() => {
 			client = io(webURL, {
@@ -44,8 +69,8 @@ describe("Server", () => {
 				reconnection: false,
 				timeout: 1000,
 				transports: [
-					"websocket"
-				]
+					"websocket",
+				],
 			});
 
 			// Server emits events faster than the test can bind them
@@ -64,7 +89,7 @@ describe("Server", () => {
 
 		it("should create network", (done) => {
 			client.on("init", () => {
-				client.emit("conn", {
+				client.emit("network:new", {
 					username: "test-user",
 					realname: "The Lounge Test",
 					nick: "test-user",
@@ -92,6 +117,10 @@ describe("Server", () => {
 				expect(data.networks).to.be.an("array");
 				expect(data.networks).to.be.empty;
 				expect(data.token).to.be.null;
+				expect(data.pushSubscription).to.be.undefined;
+
+				// Private key defined in vapid.json is "01020304050607080910111213141516" for this public key.
+				expect(data.applicationServerKey).to.equal("BM0eTDpvDnH7ewlHuXWcPTE1NjlJ06XWIS1cQeBTZmsg4EDx5sOpY7kdX1pniTo8RakL3UdfFuIbC8_zog_BWIM");
 
 				done();
 			});

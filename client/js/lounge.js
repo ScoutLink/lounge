@@ -2,281 +2,92 @@
 
 // vendor libraries
 require("jquery-ui/ui/widgets/sortable");
-require("jquery-textcomplete");
 const $ = require("jquery");
 const moment = require("moment");
-const Mousetrap = require("mousetrap");
-const URI = require("urijs");
-const fuzzy = require("fuzzy");
 
 // our libraries
-const emojiMap = require("./libs/simplemap.json");
-require("./libs/jquery/inputhistory");
 require("./libs/jquery/stickyscroll");
-require("./libs/jquery/tabcomplete");
-const helpers_roundBadgeNumber = require("./libs/handlebars/roundBadgeNumber");
-const slideoutMenu = require("./libs/slideout");
+const slideoutMenu = require("./slideout");
 const templates = require("../views");
 const socket = require("./socket");
+const render = require("./render");
 require("./socket-events");
-const constants = require("./constants");
 const storage = require("./localStorage");
 const utils = require("./utils");
 require("./webpush");
+require("./keybinds");
+require("./clipboard");
+const contextMenuFactory = require("./contextMenuFactory");
 
 $(function() {
-	var sidebar = $("#sidebar, #footer");
-	var chat = $("#chat");
+	const sidebar = $("#sidebar, #footer");
+	const chat = $("#chat");
 
 	$(document.body).data("app-name", document.title);
 
-	var pop;
-	try {
-		pop = new Audio();
-		pop.src = "audio/pop.ogg";
-	} catch (e) {
-		pop = {
-			play: $.noop
-		};
+	const viewport = $("#viewport");
+
+	function storeSidebarVisibility(name, state) {
+		storage.set(name, state);
+
+		utils.togglePreviewMoreButtonsIfNeeded();
 	}
 
-	$("#play").on("click", function() {
-		pop.play();
-	});
+	// If sidebar overlay is visible and it is clicked, close the sidebar
+	$("#sidebar-overlay").on("click", () => {
+		slideoutMenu.toggle(false);
 
-	// Autocompletion Strategies
-
-	const emojiSearchTerms = Object.keys(emojiMap);
-	const emojiStrategy = {
-		id: "emoji",
-		match: /\B:([-+\w:?]{2,}):?$/,
-		search(term, callback) {
-			// Trim colon from the matched term,
-			// as we are unable to get a clean string from match regex
-			term = term.replace(/:$/, ""),
-			callback(fuzzyGrep(term, emojiSearchTerms));
-		},
-		template([string, original]) {
-			return `<span class="emoji">${emojiMap[original]}</span> ${string}`;
-		},
-		replace([, original]) {
-			return emojiMap[original];
-		},
-		index: 1
-	};
-
-	const nicksStrategy = {
-		id: "nicks",
-		match: /\B(@([a-zA-Z_[\]\\^{}|`@][a-zA-Z0-9_[\]\\^{}|`-]*)?)$/,
-		search(term, callback) {
-			term = term.slice(1);
-			if (term[0] === "@") {
-				callback(completeNicks(term.slice(1), true)
-					.map((val) => ["@" + val[0], "@" + val[1]]));
-			} else {
-				callback(completeNicks(term, true));
-			}
-		},
-		template([string, ]) {
-			return string;
-		},
-		replace([, original]) {
-			return original;
-		},
-		index: 1
-	};
-
-	const chanStrategy = {
-		id: "chans",
-		match: /\B((#|\+|&|![A-Z0-9]{5})([^\x00\x0A\x0D\x20\x2C\x3A]+(:[^\x00\x0A\x0D\x20\x2C\x3A]*)?)?)$/,
-		search(term, callback, match) {
-			callback(completeChans(match[0]));
-		},
-		template([string,]) {
-			return string;
-		},
-		replace([, original]) {
-			return original;
-		},
-		index: 1
-	};
-
-	const commandStrategy = {
-		id: "commands",
-		match: /^\/(\w*)$/,
-		search(term, callback) {
-			callback(completeCommands("/" + term));
-		},
-		template([string, ]) {
-			return string;
-		},
-		replace([, original]) {
-			return original;
-		},
-		index: 1
-	};
-
-	const foregroundColorStrategy = {
-		id: "foreground-colors",
-		match: /\x03(\d{0,2}|[A-Za-z ]{0,10})$/,
-		search(term, callback) {
-			term = term.toLowerCase();
-
-			const matchingColorCodes = constants.colorCodeMap
-				.filter((i) => fuzzy.test(term, i[0]) || fuzzy.test(term, i[1]))
-				.map((i) => {
-					if (fuzzy.test(term, i[1])) {
-						return [i[0], fuzzy.match(term, i[1], {
-							pre: "<b>",
-							post: "</b>"
-						}).rendered];
-					}
-					return i;
-				});
-
-			callback(matchingColorCodes);
-		},
-		template(value) {
-			return `<span class="irc-fg${parseInt(value[0], 10)}">${value[1]}</span>`;
-		},
-		replace(value) {
-			return "\x03" + value[0];
-		},
-		index: 1
-	};
-
-	const backgroundColorStrategy = {
-		id: "background-colors",
-		match: /\x03(\d{2}),(\d{0,2}|[A-Za-z ]{0,10})$/,
-		search(term, callback, match) {
-			term = term.toLowerCase();
-			const matchingColorCodes = constants.colorCodeMap
-				.filter((i) => fuzzy.test(term, i[0]) || fuzzy.test(term, i[1]))
-				.map((pair) => {
-					if (fuzzy.test(term, pair[1])) {
-						return [pair[0], fuzzy.match(term, pair[1], {
-							pre: "<b>",
-							post: "</b>"
-						}).rendered];
-					}
-					return pair;
-				})
-				.map((pair) => pair.concat(match[1])); // Needed to pass fg color to `template`...
-
-			callback(matchingColorCodes);
-		},
-		template(value) {
-			return `<span class="irc-fg${parseInt(value[2], 10)} irc-bg irc-bg${parseInt(value[0], 10)}">${value[1]}</span>`;
-		},
-		replace(value) {
-			return "\x03$1," + value[0];
-		},
-		index: 2
-	};
-
-	var options = require("./options");
-
-	var windows = $("#windows");
-
-	var viewport = $("#viewport");
-	var sidebarSlide = slideoutMenu(viewport[0], sidebar[0]);
-	var contextMenuContainer = $("#context-menu-container");
-	var contextMenu = $("#context-menu");
-
-	$("#main").on("click", function(e) {
-		if ($(e.target).is(".lt")) {
-			sidebarSlide.toggle(!sidebarSlide.isOpen());
-		} else if (sidebarSlide.isOpen()) {
-			sidebarSlide.toggle(false);
+		if ($(window).outerWidth() >= utils.mobileViewportPixels) {
+			storeSidebarVisibility("thelounge.state.sidebar", false);
 		}
 	});
 
-	viewport.on("click", ".rt", function(e) {
-		var self = $(this);
-		viewport.toggleClass(self.attr("class"));
-		e.stopPropagation();
-		chat.find(".chan.active .chat").trigger("msg.sticky");
+	$("#windows").on("click", "button.lt", () => {
+		const isOpen = !slideoutMenu.isOpen();
+
+		slideoutMenu.toggle(isOpen);
+
+		if ($(window).outerWidth() >= utils.mobileViewportPixels) {
+			storeSidebarVisibility("thelounge.state.sidebar", isOpen);
+		}
 	});
 
-	function positionContextMenu(that, e) {
-		var offset;
-		var menuWidth = contextMenu.outerWidth();
-		var menuHeight = contextMenu.outerHeight();
+	viewport.on("click", ".rt", function() {
+		const isOpen = !viewport.hasClass("userlist-open");
 
-		if (that.hasClass("menu")) {
-			offset = that.offset();
-			offset.left -= menuWidth - that.outerWidth();
-			offset.top += that.outerHeight();
-			return offset;
-		}
-
-		offset = {left: e.pageX, top: e.pageY};
-
-		if ((window.innerWidth - offset.left) < menuWidth) {
-			offset.left = window.innerWidth - menuWidth;
-		}
-
-		if ((window.innerHeight - offset.top) < menuHeight) {
-			offset.top = window.innerHeight - menuHeight;
-		}
-
-		return offset;
-	}
-
-	function showContextMenu(that, e) {
-		var target = $(e.currentTarget);
-		var output = "";
-
-		if (target.hasClass("user")) {
-			output = templates.contextmenu_item({
-				class: "user",
-				text: target.text(),
-				data: target.data("name")
-			});
-		} else if (target.hasClass("chan")) {
-			output = templates.contextmenu_item({
-				class: "chan",
-				text: target.data("title"),
-				data: target.data("target")
-			});
-			output += templates.contextmenu_divider();
-			output += templates.contextmenu_item({
-				class: "close",
-				text: target.hasClass("lobby") ? "Disconnect" : target.hasClass("channel") ? "Leave" : "Close",
-				data: target.data("target")
-			});
-		}
-
-		contextMenuContainer.show();
-		contextMenu
-			.html(output)
-			.css(positionContextMenu($(that), e));
+		viewport.toggleClass("userlist-open", isOpen);
+		chat.find(".chan.active .chat").trigger("keepToBottom");
+		storeSidebarVisibility("thelounge.state.userlist", isOpen);
 
 		return false;
-	}
+	});
 
-	viewport.on("contextmenu", ".user, .network .chan", function(e) {
-		return showContextMenu(this, e);
+	viewport.on("contextmenu", ".network .chan", function(e) {
+		return contextMenuFactory.createContextMenu($(this), e).show();
+	});
+
+	viewport.on("click contextmenu", ".user", function(e) {
+		// If user is selecting text, do not open context menu
+		// This primarily only targets mobile devices where selection is performed with touch
+		if (!window.getSelection().isCollapsed) {
+			return true;
+		}
+
+		return contextMenuFactory.createContextMenu($(this), e).show();
 	});
 
 	viewport.on("click", "#chat .menu", function(e) {
-		e.currentTarget = $(e.currentTarget).closest(".chan")[0];
-		return showContextMenu(this, e);
-	});
-
-	contextMenuContainer.on("click contextmenu", function() {
-		contextMenuContainer.hide();
-		return false;
+		e.currentTarget = $(`#sidebar .chan[data-id="${$(this).closest(".chan").data("id")}"]`)[0];
+		return contextMenuFactory.createContextMenu($(this), e).show();
 	});
 
 	function resetInputHeight(input) {
 		input.style.height = input.style.minHeight;
 	}
 
-	var input = $("#input")
-		.history()
+	const input = $("#input")
 		.on("input", function() {
-			var style = window.getComputedStyle(this);
+			const style = window.getComputedStyle(this);
 
 			// Start by resetting height before computing as scrollHeight does not
 			// decrease when deleting characters
@@ -289,288 +100,154 @@ $(function() {
 				+ Math.round(parseFloat(style.borderBottomWidth) || 0)
 			) + "px";
 
-			chat.find(".chan.active .chat").trigger("msg.sticky"); // fix growing
-		})
-		.tab((word) => completeNicks(word, false), {hint: false})
-		.on("autocomplete:on", function() {
-			enableAutocomplete();
+			chat.find(".chan.active .chat").trigger("keepToBottom"); // fix growing
 		});
 
-	if (options.autocomplete) {
-		enableAutocomplete();
+	if (navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i)) {
+		$(document.body).addClass("is-apple");
 	}
 
-	function enableAutocomplete() {
-		input.textcomplete([
-			emojiStrategy, nicksStrategy, chanStrategy, commandStrategy,
-			foregroundColorStrategy, backgroundColorStrategy
-		], {
-			dropdownClassName: "textcomplete-menu",
-			placement: "top"
-		}).on({
-			"textComplete:show": function() {
-				$(this).data("autocompleting", true);
-			},
-			"textComplete:hide": function() {
-				$(this).data("autocompleting", false);
-			}
-		});
-	}
+	$("#form").on("submit", function() {
+		// Triggering click event opens the virtual keyboard on mobile
+		// This can only be called from another interactive event (e.g. button click)
+		input.trigger("click").trigger("focus");
 
-	var focus = $.noop;
-	if (!("ontouchstart" in window || navigator.maxTouchPoints > 0)) {
-		focus = function() {
-			if (chat.find(".active").hasClass("chan")) {
-				input.focus();
-			}
-		};
-
-		$(window).on("focus", focus);
-
-		chat.on("click", ".chat", function() {
-			setTimeout(function() {
-				var text = "";
-				if (window.getSelection) {
-					text = window.getSelection().toString();
-				} else if (document.selection && document.selection.type !== "Control") {
-					text = document.selection.createRange().text;
-				}
-				if (!text) {
-					focus();
-				}
-			}, 2);
-		});
-	}
-
-	$("#form").on("submit", function(e) {
-		e.preventDefault();
-		utils.forceFocus();
-		var text = input.val();
+		const target = chat.data("id");
+		const text = input.val();
 
 		if (text.length === 0) {
-			return;
+			return false;
 		}
 
 		input.val("");
 		resetInputHeight(input.get(0));
 
-		if (text.indexOf("/clear") === 0) {
-			utils.clear();
-			return;
+		if (text.charAt(0) === "/") {
+			const args = text.substr(1).split(" ");
+			const cmd = args.shift().toLowerCase();
+
+			if (typeof utils.inputCommands[cmd] === "function" && utils.inputCommands[cmd](args)) {
+				return false;
+			}
 		}
 
-		if (text.indexOf("/collapse") === 0) {
-			$(".chan.active .toggle-button.opened").click();
-			return;
-		}
+		socket.emit("input", {target, text});
 
-		if (text.indexOf("/expand") === 0) {
-			$(".chan.active .toggle-button:not(.opened)").click();
-			return;
-		}
-
-		socket.emit("input", {
-			target: chat.data("id"),
-			text: text
-		});
-	});
-
-	function findCurrentNetworkChan(name) {
-		name = name.toLowerCase();
-
-		return $(".network .chan.active")
-			.parent(".network")
-			.find(".chan")
-			.filter(function() {
-				return $(this).data("title").toLowerCase() === name;
-			})
-			.first();
-	}
-
-	$("button#set-nick").on("click", function() {
-		utils.toggleNickEditor(true);
-
-		// Selects existing nick in the editable text field
-		var element = document.querySelector("#nick-value");
-		element.focus();
-		var range = document.createRange();
-		range.selectNodeContents(element);
-		var selection = window.getSelection();
-		selection.removeAllRanges();
-		selection.addRange(range);
-	});
-
-	$("button#cancel-nick").on("click", cancelNick);
-	$("button#submit-nick").on("click", submitNick);
-
-	function submitNick() {
-		var newNick = $("#nick-value").text().trim();
-
-		if (newNick.length === 0) {
-			cancelNick();
-			return;
-		}
-
-		utils.toggleNickEditor(false);
-
-		socket.emit("input", {
-			target: chat.data("id"),
-			text: "/nick " + newNick
-		});
-	}
-
-	function cancelNick() {
-		utils.setNick(sidebar.find(".chan.active").closest(".network").data("nick"));
-	}
-
-	$("#nick-value").keypress(function(e) {
-		switch (e.keyCode ? e.keyCode : e.which) {
-		case 13: // Enter
-			// Ensures a new line is not added when pressing Enter
-			e.preventDefault();
-			break;
-		}
-	}).keyup(function(e) {
-		switch (e.keyCode ? e.keyCode : e.which) {
-		case 13: // Enter
-			submitNick();
-			break;
-		case 27: // Escape
-			cancelNick();
-			break;
-		}
+		return false;
 	});
 
 	chat.on("click", ".inline-channel", function() {
-		var name = $(this).data("chan");
-		var chan = findCurrentNetworkChan(name);
+		const name = $(this).attr("data-chan");
+		const chan = utils.findCurrentNetworkChan(name);
 
 		if (chan.length) {
-			chan.click();
-		} else {
-			socket.emit("input", {
-				target: chat.data("id"),
-				text: "/join " + name
-			});
-		}
-	});
-
-	chat.on("click", ".condensed-text", function() {
-		$(this).closest(".msg.condensed").toggleClass("closed");
-	});
-
-	chat.on("click", ".user", function() {
-		var name = $(this).data("name");
-		var chan = findCurrentNetworkChan(name);
-
-		if (chan.length) {
-			chan.click();
+			chan.trigger("click");
 		}
 
 		socket.emit("input", {
 			target: chat.data("id"),
-			text: "/whois " + name
+			text: "/join " + name,
 		});
 	});
 
-	sidebar.on("click", ".chan, button", function(e, data) {
-		// Pushes states to history web API when clicking elements with a data-target attribute.
-		// States are very trivial and only contain a single `clickTarget` property which
-		// contains a CSS selector that targets elements which takes the user to a different view
-		// when clicked. The `popstate` event listener will trigger synthetic click events using that
-		// selector and thus take the user to a different view/state.
-		if (data && data.pushState === false) {
-			return;
-		}
-		const self = $(this);
-		const target = self.data("target");
-		if (!target) {
-			return;
-		}
-		const state = {};
-
-		if (self.hasClass("chan")) {
-			state.clickTarget = `.chan[data-id="${self.data("id")}"]`;
-		} else {
-			state.clickTarget = `#footer button[data-target="${target}"]`;
-		}
-
-		if (history && history.pushState) {
-			if (data && data.replaceHistory && history.replaceState) {
-				history.replaceState(state, null, null);
-			} else {
-				history.pushState(state, null, null);
-			}
-		}
+	chat.on("click", ".condensed-summary .content", function() {
+		$(this).closest(".msg.condensed").toggleClass("closed");
 	});
 
-	sidebar.on("click", ".chan, button", function() {
-		var self = $(this);
-		var target = self.data("target");
+	const openWindow = function openWindow(e, {keepSidebarOpen, pushState, replaceHistory} = {}) {
+		const self = $(this);
+		const target = self.attr("data-target");
+
 		if (!target) {
 			return;
 		}
 
-		chat.data(
-			"id",
-			self.data("id")
-		);
-		socket.emit(
-			"open",
-			self.data("id")
-		);
+		// This is a rather gross hack to account for sources that are in the
+		// sidebar specifically. Needs to be done better when window management gets
+		// refactored.
+		const inSidebar = self.parents("#sidebar, #footer").length > 0;
 
-		sidebar.find(".active").removeClass("active");
-		self.addClass("active")
-			.find(".badge")
-			.removeClass("highlight")
-			.empty();
+		if (inSidebar) {
+			chat.data(
+				"id",
+				self.data("id")
+			);
+			socket.emit(
+				"open",
+				self.data("id")
+			);
 
-		if (sidebar.find(".highlight").length === 0) {
-			utils.toggleNotificationMarkers(false);
+			sidebar.find(".active")
+				.removeClass("active")
+				.attr("aria-selected", false);
+
+			self.addClass("active")
+				.attr("aria-selected", true)
+				.find(".badge")
+				.attr("data-highlight", 0)
+				.removeClass("highlight")
+				.empty();
+
+			if (sidebar.find(".highlight").length === 0) {
+				utils.toggleNotificationMarkers(false);
+			}
+
+			if (!keepSidebarOpen && $(window).outerWidth() < utils.mobileViewportPixels) {
+				slideoutMenu.toggle(false);
+			}
 		}
 
-		sidebarSlide.toggle(false);
-
-		var lastActive = $("#windows > .active");
+		const lastActive = $("#windows > .active");
 
 		lastActive
 			.removeClass("active")
 			.find(".chat")
 			.unsticky();
 
-		var lastActiveChan = lastActive
-			.find(".chan.active")
-			.removeClass("active");
+		const lastActiveChan = lastActive.find(".chan.active");
 
-		lastActiveChan
-			.find(".unread-marker")
-			.appendTo(lastActiveChan.find(".messages"));
+		if (lastActiveChan.length > 0) {
+			lastActiveChan
+				.removeClass("active")
+				.find(".unread-marker")
+				.data("unread-id", 0)
+				.appendTo(lastActiveChan.find(".messages"));
 
-		var chan = $(target)
+			render.trimMessageInChannel(lastActiveChan, 100);
+		}
+
+		const chan = $(target)
 			.addClass("active")
 			.trigger("show");
 
-		let title = $(document.body).data("app-name");
-		if (chan.data("title")) {
-			title = chan.data("title") + " — " + title;
-		}
-		document.title = title;
+		utils.togglePreviewMoreButtonsIfNeeded();
+		utils.updateTitle();
 
-		var placeholder = "";
-		if (chan.data("type") === "channel" || chan.data("type") === "query") {
-			placeholder = `Write to ${chan.data("title")}`;
+		const type = chan.data("type");
+		let placeholder = "";
+
+		if (type === "channel" || type === "query") {
+			placeholder = `Write to ${chan.attr("aria-label")}`;
 		}
-		input.attr("placeholder", placeholder);
+
+		input
+			.prop("placeholder", placeholder)
+			.attr("aria-label", placeholder);
 
 		if (self.hasClass("chan")) {
 			$("#chat-container").addClass("active");
-			utils.setNick(self.closest(".network").data("nick"));
+			$("#nick").text(self.closest(".network").attr("data-nick"));
 		}
 
-		var chanChat = chan.find(".chat");
-		if (chanChat.length > 0 && chan.data("type") !== "special") {
+		const chanChat = chan.find(".chat");
+
+		if (chanChat.length > 0 && type !== "special") {
 			chanChat.sticky();
+
+			// On touch devices unfocus (blur) the input to correctly close the virtual keyboard
+			// An explicit blur is required, as the keyboard may open back up if the focus remains
+			// See https://github.com/thelounge/thelounge/issues/2257
+			input.trigger("ontouchstart" in window ? "blur" : "focus");
 		}
 
 		if (chan.data("needsNamesRefresh") === true) {
@@ -578,410 +255,43 @@ $(function() {
 			socket.emit("names", {target: self.data("id")});
 		}
 
-		focus();
-	});
-
-	sidebar.on("click", "#sign-out", function() {
-		socket.emit("sign-out");
-		storage.remove("token");
-
-		if (!socket.connected) {
-			location.reload();
+		// Pushes states to history web API when clicking elements with a data-target attribute.
+		// States are very trivial and only contain a single `clickTarget` property which
+		// contains a CSS selector that targets elements which takes the user to a different view
+		// when clicked. The `popstate` event listener will trigger synthetic click events using that
+		// selector and thus take the user to a different view/state.
+		if (pushState === false) {
+			return false;
 		}
-	});
+
+		const state = {};
+
+		if (self.prop("id")) {
+			state.clickTarget = `#${self.prop("id")}`;
+		} else if (self.hasClass("chan")) {
+			state.clickTarget = `#sidebar .chan[data-id="${self.data("id")}"]`;
+		} else {
+			state.clickTarget = `#footer button[data-target="${target}"]`;
+		}
+
+		if (history && history.pushState) {
+			if (replaceHistory && history.replaceState) {
+				history.replaceState(state, null, target);
+			} else {
+				history.pushState(state, null, target);
+			}
+		}
+
+		return false;
+	};
+
+	sidebar.on("click", ".chan, button", openWindow);
+	$("#help").on("click", "#view-changelog, #back-to-help", openWindow);
+	$("#changelog").on("click", "#back-to-help", openWindow);
 
 	sidebar.on("click", ".close", function() {
-		var cmd = "/close";
-		var chan = $(this).closest(".chan");
-		if (chan.hasClass("lobby")) {
-			cmd = "/quit";
-			var server = chan.find(".name").html();
-			if (!confirm("Disconnect from " + server + "?")) {
-				return false;
-			}
-		}
-		socket.emit("input", {
-			target: chan.data("id"),
-			text: cmd
-		});
-		chan.css({
-			transition: "none",
-			opacity: 0.4
-		});
-		return false;
+		utils.closeChan($(this).closest(".chan"));
 	});
-
-	contextMenu.on("click", ".context-menu-item", function() {
-		switch ($(this).data("action")) {
-		case "close":
-			$(".networks .chan[data-target='" + $(this).data("data") + "'] .close").click();
-			break;
-		case "chan":
-			$(".networks .chan[data-target='" + $(this).data("data") + "']").click();
-			break;
-		case "user":
-			$(".channel.active .users .user[data-name='" + $(this).data("data") + "']").click();
-			break;
-		}
-	});
-
-	chat.on("input", ".search", function() {
-		const value = $(this).val();
-		const parent = $(this).closest(".users");
-		const names = parent.find(".names-original");
-		const container = parent.find(".names-filtered");
-
-		if (!value.length) {
-			container.hide();
-			names.show();
-			return;
-		}
-
-		const fuzzyOptions = {
-			pre: "<b>",
-			post: "</b>",
-			extract: (el) => $(el).text()
-		};
-
-		const result = fuzzy.filter(
-			value,
-			names.find(".user").toArray(),
-			fuzzyOptions
-		);
-
-		names.hide();
-		container.html(templates.user_filtered({matches: result})).show();
-	});
-
-	chat.on("msg", ".messages", function(e, target, msg) {
-		var unread = msg.unread;
-		msg = msg.msg;
-
-		if (msg.self) {
-			return;
-		}
-
-		var button = sidebar.find(".chan[data-target='" + target + "']");
-		if (msg.highlight || (options.notifyAllMessages && msg.type === "message")) {
-			if (!document.hasFocus() || !$(target).hasClass("active")) {
-				if (options.notification) {
-					try {
-						pop.play();
-					} catch (exception) {
-						// On mobile, sounds can not be played without user interaction.
-					}
-				}
-				utils.toggleNotificationMarkers(true);
-
-				if (options.desktopNotifications && Notification.permission === "granted") {
-					var title;
-					var body;
-
-					if (msg.type === "invite") {
-						title = "New channel invite:";
-						body = msg.from + " invited you to " + msg.channel;
-					} else {
-						title = msg.from;
-						if (!button.hasClass("query")) {
-							title += " (" + button.data("title").trim() + ")";
-						}
-						if (msg.type === "message") {
-							title += " says:";
-						}
-						body = msg.text.replace(/\x03(?:[0-9]{1,2}(?:,[0-9]{1,2})?)?|[\x00-\x1F]|\x7F/g, "").trim();
-					}
-
-					try {
-						var notify = new Notification(title, {
-							body: body,
-							icon: "img/logo-64.png",
-							tag: target
-						});
-						notify.addEventListener("click", function() {
-							window.focus();
-							button.click();
-							this.close();
-						});
-					} catch (exception) {
-						// `new Notification(...)` is not supported and should be silenced.
-					}
-				}
-			}
-		}
-
-		if (button.hasClass("active")) {
-			return;
-		}
-
-		if (!unread) {
-			return;
-		}
-
-		var badge = button.find(".badge").html(helpers_roundBadgeNumber(unread));
-
-		if (msg.highlight) {
-			badge.addClass("highlight");
-		}
-	});
-
-	chat.on("click", ".show-more-button", function() {
-		var self = $(this);
-		var lastMessage = self.parent().next(".messages").children(".msg").first();
-		if (lastMessage.is(".condensed")) {
-			lastMessage = lastMessage.children(".msg").first();
-		}
-		var lastMessageId = parseInt(lastMessage[0].id.replace("msg-", ""), 10);
-
-		self
-			.text("Loading older messages…")
-			.prop("disabled", true);
-
-		socket.emit("more", {
-			target: self.data("id"),
-			lastId: lastMessageId
-		});
-	});
-
-	var forms = $("#sign-in, #connect, #change-password");
-
-	windows.on("show", "#sign-in", function() {
-		$(this).find("input").each(function() {
-			var self = $(this);
-			if (self.val() === "") {
-				self.focus();
-				return false;
-			}
-		});
-	});
-	if ($("body").hasClass("public")) {
-		$("#connect").one("show", function() {
-			var params = URI(document.location.search);
-			params = params.search(true);
-			// Possible parameters:  name, host, port, password, tls, nick, username, realname, join
-			// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in#Iterating_over_own_properties_only
-			for (var key in params) {
-				if (params.hasOwnProperty(key)) {
-					var value = params[key];
-					// \W searches for non-word characters
-					key = key.replace(/\W/g, "");
-
-					var element = $("#connect input[name='" + key + "']");
-					// if the element exists, it isn't disabled, and it isn't hidden
-					if (element.length > 0 && !element.is(":disabled") && !element.is(":hidden")) {
-						if (element.is(":checkbox")) {
-							element.prop("checked", (value === "1" || value === "true") ? true : false);
-						} else {
-							element.val(value);
-						}
-					}
-				}
-			}
-		});
-	}
-
-	forms.on("submit", "form", function(e) {
-		e.preventDefault();
-		var event = "auth";
-		var form = $(this);
-		form.find(".btn")
-			.attr("disabled", true)
-			.end();
-		if (form.closest(".window").attr("id") === "connect") {
-			event = "conn";
-		} else if (form.closest("div").attr("id") === "change-password") {
-			event = "change-password";
-		}
-		var values = {};
-		$.each(form.serializeArray(), function(i, obj) {
-			if (obj.value !== "") {
-				values[obj.name] = obj.value;
-			}
-		});
-		if (values.user) {
-			storage.set("user", values.user);
-		}
-		socket.emit(
-			event, values
-		);
-	});
-
-	forms.on("focusin", ".nick", function() {
-		// Need to set the first "lastvalue", so it can be used in the below function
-		var nick = $(this);
-		nick.data("lastvalue", nick.val());
-	});
-
-	forms.on("input", ".nick", function() {
-		var nick = $(this).val();
-		var usernameInput = forms.find(".username");
-
-		// Because this gets called /after/ it has already changed, we need use the previous value
-		var lastValue = $(this).data("lastvalue");
-
-		// They were the same before the change, so update the username field
-		if (usernameInput.val() === lastValue) {
-			usernameInput.val(nick);
-		}
-
-		// Store the "previous" value, for next time
-		$(this).data("lastvalue", nick);
-	});
-
-	(function HotkeysScope() {
-		Mousetrap.bind([
-			"pageup",
-			"pagedown"
-		], function(e, key) {
-			let container = windows.find(".window.active");
-
-			// Chat windows scroll message container
-			if (container.attr("id") === "chat-container") {
-				container = container.find(".chan.active .chat");
-			}
-
-			container.finish();
-
-			const offset = container.get(0).clientHeight * 0.9;
-			let scrollTop = container.scrollTop();
-
-			if (key === "pageup") {
-				scrollTop = Math.floor(scrollTop - offset);
-			} else {
-				scrollTop = Math.ceil(scrollTop + offset);
-			}
-
-			container.animate({
-				scrollTop: scrollTop
-			}, 200);
-
-			return false;
-		});
-
-		Mousetrap.bind([
-			"command+up",
-			"command+down",
-			"ctrl+up",
-			"ctrl+down"
-		], function(e, keys) {
-			var channels = sidebar.find(".chan");
-			var index = channels.index(channels.filter(".active"));
-			var direction = keys.split("+").pop();
-			switch (direction) {
-			case "up":
-				// Loop
-				var upTarget = (channels.length + (index - 1 + channels.length)) % channels.length;
-				channels.eq(upTarget).click();
-				break;
-
-			case "down":
-				// Loop
-				var downTarget = (channels.length + (index + 1 + channels.length)) % channels.length;
-				channels.eq(downTarget).click();
-				break;
-			}
-		});
-
-		Mousetrap.bind([
-			"command+shift+l",
-			"ctrl+shift+l"
-		], function(e) {
-			if (e.target === input[0]) {
-				utils.clear();
-				e.preventDefault();
-			}
-		});
-
-		Mousetrap.bind([
-			"escape"
-		], function() {
-			contextMenuContainer.hide();
-		});
-
-		var colorsHotkeys = {
-			k: "\x03",
-			b: "\x02",
-			u: "\x1F",
-			i: "\x1D",
-			o: "\x0F",
-		};
-
-		for (var hotkey in colorsHotkeys) {
-			Mousetrap.bind([
-				"command+" + hotkey,
-				"ctrl+" + hotkey
-			], function(e) {
-				e.preventDefault();
-
-				const cursorPosStart = input.prop("selectionStart");
-				const cursorPosEnd = input.prop("selectionEnd");
-				const value = input.val();
-				let newValue = value.substring(0, cursorPosStart) + colorsHotkeys[e.key];
-
-				if (cursorPosStart === cursorPosEnd) {
-					// If no text is selected, insert at cursor
-					newValue += value.substring(cursorPosEnd, value.length);
-				} else {
-					// If text is selected, insert formatting character at start and the end
-					newValue += value.substring(cursorPosStart, cursorPosEnd) + colorsHotkeys[e.key] + value.substring(cursorPosEnd, value.length);
-				}
-
-				input
-					.val(newValue)
-					.get(0).setSelectionRange(cursorPosStart + 1, cursorPosEnd + 1);
-			});
-		}
-	}());
-
-	function fuzzyGrep(term, array) {
-		const results = fuzzy.filter(
-			term,
-			array,
-			{
-				pre: "<b>",
-				post: "</b>"
-			}
-		);
-		return results.map((el) => [el.string, el.original]);
-	}
-
-	function completeNicks(word, isFuzzy) {
-		const users = chat.find(".active .users");
-		word = word.toLowerCase();
-
-		// Lobbies and private chats do not have an user list
-		if (!users.length) {
-			return [];
-		}
-
-		const words = users.data("nicks");
-		if (isFuzzy) {
-			return fuzzyGrep(word, words);
-		}
-		return $.grep(
-			words,
-			(w) => !w.toLowerCase().indexOf(word)
-		);
-	}
-
-	function completeCommands(word) {
-		const words = constants.commands.slice();
-
-		return fuzzyGrep(word, words);
-	}
-
-	function completeChans(word) {
-		const words = [];
-
-		sidebar.find(".chan")
-			.each(function() {
-				const self = $(this);
-				if (!self.hasClass("lobby")) {
-					words.push(self.data("title"));
-				}
-			});
-
-		return fuzzyGrep(word, words);
-	}
 
 	$(document).on("visibilitychange focus click", () => {
 		if (sidebar.find(".highlight").length === 0) {
@@ -1000,28 +310,43 @@ $(function() {
 		$(".date-marker-text[data-label='Today'], .date-marker-text[data-label='Yesterday']")
 			.closest(".date-marker-container")
 			.each(function() {
-				$(this).replaceWith(templates.date_marker({msgDate: $(this).data("timestamp")}));
+				$(this).replaceWith(templates.date_marker({time: $(this).data("time")}));
 			});
 
 		// This should always be 24h later but re-computing exact value just in case
 		setTimeout(updateDateMarkers, msUntilNextDay());
 	}
-	setTimeout(updateDateMarkers, msUntilNextDay());
 
-	// Only start opening socket.io connection after all events have been registered
-	socket.open();
+	setTimeout(updateDateMarkers, msUntilNextDay());
 
 	window.addEventListener("popstate", (e) => {
 		const {state} = e;
+
 		if (!state) {
 			return;
 		}
 
-		const {clickTarget} = state;
+		let {clickTarget} = state;
+
 		if (clickTarget) {
+			// This will be true when click target corresponds to opening a thumbnail,
+			// browsing to the previous/next thumbnail, or closing the image viewer.
+			const imageViewerRelated = clickTarget.includes(".toggle-thumbnail");
+
+			// If the click target is not related to the image viewer but the viewer
+			// is currently opened, we need to close it.
+			if (!imageViewerRelated && $("#image-viewer").hasClass("opened")) {
+				clickTarget += ", #image-viewer";
+			}
+
+			// Emit the click to the target, while making sure it is not going to be
+			// added to the state again.
 			$(clickTarget).trigger("click", {
-				pushState: false
+				pushState: false,
 			});
 		}
 	});
+
+	// Only start opening socket.io connection after all events have been registered
+	socket.open();
 });
