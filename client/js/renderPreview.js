@@ -1,10 +1,15 @@
 "use strict";
 
 const $ = require("jquery");
+const debounce = require("lodash/debounce");
+const Mousetrap = require("mousetrap");
+
 const options = require("./options");
 const socket = require("./socket");
 const templates = require("../views");
-const input = $("#input");
+const chat = $("#chat");
+
+const {togglePreviewMoreButtonsIfNeeded} = require("./utils");
 
 module.exports = renderPreview;
 
@@ -13,6 +18,36 @@ function renderPreview(preview, msg) {
 		return;
 	}
 
+	preview.shown = preview.shown && options.shouldOpenMessagePreview(preview.type);
+
+	const template = $(templates.msg_preview({preview}));
+	const image = template.find("img, video, audio").first();
+
+	if (image.length === 0) {
+		return appendPreview(preview, msg, template);
+	}
+
+	const loadEvent = image.prop("tagName") === "IMG" ? "load" : "canplay";
+
+	// If there is an image in preview, wait for it to load before appending it to DOM
+	// This is done to prevent problems keeping scroll to the bottom while images load
+	image.on(`${loadEvent}.preview`, () => {
+		image.off(".preview");
+
+		appendPreview(preview, msg, template);
+	});
+
+	// If the image fails to load, remove it from DOM and still render the preview
+	if (preview.type === "link") {
+		image.on("abort.preview error.preview", () => {
+			image.parent().remove();
+
+			appendPreview(preview, msg, template);
+		});
+	}
+}
+
+function appendPreview(preview, msg, template) {
 	const escapedLink = preview.link.replace(/["\\]/g, "\\$&");
 	const previewContainer = msg.find(`.preview[data-url="${escapedLink}"]`);
 
@@ -25,27 +60,56 @@ function renderPreview(preview, msg) {
 		return;
 	}
 
-	preview.shown = preview.shown && options.shouldOpenMessagePreview(preview.type);
-
 	const container = msg.closest(".chat");
-	let bottom = false;
-	if (container.length) {
-		bottom = container.isScrollBottom();
-	}
+	const channel = container.closest(".chan");
+	const channelId = channel.data("id") || -1;
+	const activeChannelId = chat.find(".chan.active").data("id") || -2;
 
 	msg.find(`.text a[href="${escapedLink}"]`)
 		.first()
-		.after(templates.msg_preview_toggle({preview: preview}).trim());
+		.after(templates.msg_preview_toggle({preview}).trim());
 
-	previewContainer
-		.append(templates.msg_preview({preview: preview}));
+	previewContainer.append(template);
 
-	if (preview.shown && bottom) {
-		handleImageInPreview(msg.find(".toggle-content"), container);
+	const moreBtn = previewContainer.find(".more");
+	const previewContent = previewContainer.find(".toggle-content");
+
+	// Depending on the size of the preview and the text within it, show or hide a
+	// "More" button that allows users to expand without having to open the link.
+	// Warning: Make sure to call this only on active channel, link previews only,
+	// expanded only.
+	const showMoreIfNeeded = () => {
+		const isVisible = moreBtn.is(":visible");
+		const shouldShow = previewContent[0].offsetWidth >= previewContainer[0].offsetWidth;
+
+		if (!isVisible && shouldShow) {
+			moreBtn.show();
+		} else if (isVisible && !shouldShow) {
+			togglePreviewMore(moreBtn, false);
+			moreBtn.hide();
+		}
+	};
+
+	// "More" button only applies on text previews
+	if (preview.type === "link") {
+		// This event is triggered when a side menu is opened/closed, or when the
+		// preview gets expanded/collapsed.
+		previewContent.on("showMoreIfNeeded",
+			() => window.requestAnimationFrame(showMoreIfNeeded)
+		);
 	}
 
-	container.trigger("keepToBottom");
+	if (activeChannelId === channelId) {
+		// If this preview is in active channel, hide "More" button if necessary
+		previewContent.trigger("showMoreIfNeeded");
+
+		container.trigger("keepToBottom");
+	}
 }
+
+// On resize, previews in the current channel that are expanded need to compute
+// their "More" button. Debounced handler to avoid performance cost.
+$(window).on("resize", debounce(togglePreviewMoreButtonsIfNeeded, 150));
 
 $("#chat").on("click", ".text .toggle-button", function() {
 	const self = $(this);
@@ -54,21 +118,23 @@ $("#chat").on("click", ".text .toggle-button", function() {
 		.find(`.preview[data-url="${self.data("url")}"] .toggle-content`);
 	const bottom = container.isScrollBottom();
 
-	if (bottom && !content.hasClass("show")) {
-		handleImageInPreview(content, container);
-	}
-
 	self.toggleClass("opened");
 	content.toggleClass("show");
 
+	const isExpanded = content.hasClass("show");
+
+	if (isExpanded) {
+		content.trigger("showMoreIfNeeded");
+	}
+
 	// Tell the server we're toggling so it remembers at page reload
 	// TODO Avoid sending many single events when using `/collapse` or `/expand`
-	// See https://github.com/thelounge/lounge/issues/1377
+	// See https://github.com/thelounge/thelounge/issues/1377
 	socket.emit("msg:preview:toggle", {
 		target: parseInt(self.closest(".chan").data("id"), 10),
-		msgId: parseInt(self.closest(".msg").attr("id").replace("msg-", ""), 10),
+		msgId: parseInt(self.closest(".msg").prop("id").replace("msg-", ""), 10),
 		link: self.data("url"),
-		shown: content.hasClass("show"),
+		shown: isExpanded,
 	});
 
 	// If scrollbar was at the bottom before toggling the preview, keep it at the bottom
@@ -77,14 +143,21 @@ $("#chat").on("click", ".text .toggle-button", function() {
 	}
 });
 
-function handleImageInPreview(content, container) {
-	const img = content.find("img");
+$("#chat").on("click", ".toggle-content .more", function() {
+	togglePreviewMore($(this));
+	return false;
+});
 
-	// Trigger scroll logic after the image loads
-	if (img.length && !img.width()) {
-		img.on("load", function() {
-			container.trigger("keepToBottom");
-		});
+function togglePreviewMore(moreBtn, state = undefined) {
+	moreBtn.closest(".toggle-content").toggleClass("opened", state);
+	const isExpanded = moreBtn.closest(".toggle-content").hasClass("opened");
+
+	moreBtn.attr("aria-expanded", isExpanded);
+
+	if (isExpanded) {
+		moreBtn.attr("aria-label", moreBtn.data("opened-text"));
+	} else {
+		moreBtn.attr("aria-label", moreBtn.data("closed-text"));
 	}
 }
 
@@ -92,10 +165,12 @@ function handleImageInPreview(content, container) {
 
 const imageViewer = $("#image-viewer");
 
-$("#chat").on("click", ".toggle-thumbnail", function() {
+$("#windows").on("click", ".toggle-thumbnail", function(event, data = {}) {
 	const link = $(this);
 
-	openImageViewer(link);
+	// Passing `data`, specifically `data.pushState`, to not add the action to the
+	// history state if back or forward buttons were pressed.
+	openImageViewer(link, data);
 
 	// Prevent the link to open a new page since we're opening the image viewer,
 	// but keep it a link to allow for Ctrl/Cmd+click.
@@ -103,29 +178,22 @@ $("#chat").on("click", ".toggle-thumbnail", function() {
 	return false;
 });
 
-imageViewer.on("click", function() {
-	closeImageViewer();
+imageViewer.on("click", function(event, data = {}) {
+	// Passing `data`, specifically `data.pushState`, to not add the action to the
+	// history state if back or forward buttons were pressed.
+	closeImageViewer(data);
 });
 
-$(document).keydown(function(e) {
-	switch (e.keyCode ? e.keyCode : e.which) {
-	case 27: // Escape
-		closeImageViewer();
-		break;
-	case 37: // Left arrow
-		if (imageViewer.hasClass("opened")) {
-			imageViewer.find(".previous-image-btn").click();
-		}
-		break;
-	case 39: // Right arrow
-		if (imageViewer.hasClass("opened")) {
-			imageViewer.find(".next-image-btn").click();
-		}
-		break;
+Mousetrap.bind("esc", () => closeImageViewer());
+
+Mousetrap.bind(["left", "right"], (e, key) => {
+	if (imageViewer.hasClass("opened")) {
+		const direction = key === "left" ? "previous" : "next";
+		imageViewer.find(`.${direction}-image-btn`).trigger("click");
 	}
 });
 
-function openImageViewer(link) {
+function openImageViewer(link, {pushState = true} = {}) {
 	$(".previous-image").removeClass("previous-image");
 	$(".next-image").removeClass("next-image");
 
@@ -138,48 +206,77 @@ function openImageViewer(link) {
 	// Previous image
 	let previousImage = link.closest(".preview").prev(".preview")
 		.find(".toggle-content.show .toggle-thumbnail").last();
+
 	if (!previousImage.length) {
 		previousImage = link.closest(".msg").prevAll()
 			.find(".toggle-content.show .toggle-thumbnail").last();
 	}
+
 	previousImage.addClass("previous-image");
 
 	// Next image
 	let nextImage = link.closest(".preview").next(".preview")
 		.find(".toggle-content.show .toggle-thumbnail").first();
+
 	if (!nextImage.length) {
 		nextImage = link.closest(".msg").nextAll()
 			.find(".toggle-content.show .toggle-thumbnail").first();
 	}
+
 	nextImage.addClass("next-image");
 
 	imageViewer.html(templates.image_viewer({
-		image: link.find("img").attr("src"),
-		link: link.attr("href"),
-		type: link.parent().hasClass("toggle-type-image") ? "image" : "link",
+		image: link.find("img").prop("src"),
+		link: link.prop("href"),
+		type: link.parent().hasClass("toggle-type-link") ? "link" : "image",
 		hasPreviousImage: previousImage.length > 0,
 		hasNextImage: nextImage.length > 0,
 	}));
 
-	imageViewer.addClass("opened");
+	// Turn off transitionend listener before opening the viewer,
+	// which caused image viewer to become empty in rare cases
+	imageViewer
+		.off("transitionend")
+		.addClass("opened");
+
+	// History management
+	if (pushState) {
+		let clickTarget = "";
+
+		// Images can be in a message (channel URL previews) or not (window URL
+		// preview, e.g. changelog). This is sub-optimal and needs improvement to
+		// make image preview more generic and not specific for channel previews.
+		if (link.closest(".msg").length > 0) {
+			clickTarget = `#${link.closest(".msg").prop("id")} `;
+		}
+
+		clickTarget += `a.toggle-thumbnail[href="${link.prop("href")}"] img`;
+		history.pushState({clickTarget}, null, null);
+	}
 }
 
 imageViewer.on("click", ".previous-image-btn", function() {
-	$(".previous-image").click();
+	$(".previous-image").trigger("click");
 	return false;
 });
 
 imageViewer.on("click", ".next-image-btn", function() {
-	$(".next-image").click();
+	$(".next-image").trigger("click");
 	return false;
 });
 
-function closeImageViewer() {
+function closeImageViewer({pushState = true} = {}) {
 	imageViewer
 		.removeClass("opened")
 		.one("transitionend", function() {
 			imageViewer.empty();
 		});
 
-	input.focus();
+	// History management
+	if (pushState) {
+		const clickTarget =
+			"#sidebar " +
+			`.chan[data-id="${$("#sidebar .chan.active").data("id")}"]`;
+		history.pushState({clickTarget}, null, null);
+	}
 }

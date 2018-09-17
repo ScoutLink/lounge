@@ -1,12 +1,13 @@
 "use strict";
 
-var _ = require("lodash");
+const _ = require("lodash");
 
 module.exports = User;
 
 function User(attr, prefixLookup) {
 	_.defaults(this, attr, {
 		modes: [],
+		away: "",
 		mode: "",
 		nick: "",
 		lastMessage: 0,
@@ -16,7 +17,7 @@ function User(attr, prefixLookup) {
 }
 
 User.prototype.setModes = function(modes, prefixLookup) {
-	// irc-framework sets character mode, but lounge works with symbols
+	// irc-framework sets character mode, but The Lounge works with symbols
 	this.modes = modes.map((mode) => prefixLookup[mode]);
 
 	this.mode = this.modes[0] || "";
