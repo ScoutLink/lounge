@@ -19,6 +19,11 @@
 					{{/unless}}
 				{{/if}}
 			</h1>
+			<div>Type a nickname in the nick box below and click connect to instantly chat to Scouts and Guides from around the world!</div>
+
+			<div><b>Disclaimer</b>: By connecting to ScoutLink you confirm you have read and agree to follow our <a href="https://scoutlink.net/rules">Rules</a> and <a href="https://scoutlink.net/safety">Safety</a> information.</div>
+
+
 		</div>
 	{{#if displayNetwork}}
 		<div>
@@ -62,7 +67,7 @@
 			<h2>User preferences</h2>
 		</div>
 		<div class="col-sm-3">
-			<label for="connect:nick">Nick</label>
+			<label for="connect:nick">Nickname</label>
 		</div>
 		<div class="col-sm-9">
 			<input class="input nick" id="connect:nick" name="nick" value="{{defaults.nick}}" required>
@@ -82,10 +87,10 @@
 			<input class="input" id="connect:password" type="password" name="password" value="{{defaults.password}}">
 			{{> ../reveal-password}}
 		</div>
-		<div class="col-sm-3">
+		<div class="col-sm-3" style="display: none">
 			<label for="connect:realname">Real name</label>
 		</div>
-		<div class="col-sm-9">
+		<div class="col-sm-9" style="display: none">
 			<input class="input" id="connect:realname" name="realname" value="{{defaults.realname}}">
 		</div>
 	{{#if defaults.uuid}}
@@ -104,7 +109,10 @@
 			<label for="connect:channels">Channels</label>
 		</div>
 		<div class="col-sm-9">
-			<input class="input" id="connect:channels" name="join" value="{{defaults.join}}">
+			<select class="input" id="connect:channels" name="join">
+				{{~#each defaults.joins~}} <option value="{{~this}}">{{~this}}</option>
+				{{/each~}}
+			</select>
 		</div>
 		<div class="col-sm-9 col-sm-offset-3">
 			<button type="submit" class="btn">Connect</button>
