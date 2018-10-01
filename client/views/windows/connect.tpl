@@ -110,7 +110,7 @@
 		</div>
 		<div class="col-sm-9">
 			<select class="input" id="connect:channels" name="join">
-				{{~#each defaults.join~}} <option value="{{~this}}">{{~this}}</option>
+				{{~#each defaults.channels~}} <option value="{{~this}}">{{~this}}</option>
 				{{/each~}}
 			</select>
 		</div>
