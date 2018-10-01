@@ -20,60 +20,64 @@ const colorCodeMap = [
 ];
 
 const commands = [
+	"/as",
 	"/away",
 	"/back",
 	"/ban",
 	"/banlist",
+	"/bs",
 	"/close",
 	"/collapse",
 	"/connect",
+	"/cs",
 	"/ctcp",
+	"/cycle",
+	"/dehop",
 	"/deop",
 	"/devoice",
 	"/disconnect",
 	"/expand",
+	"/ho",
+	"/hop",
+	"/hs",
+	"/ignore",
+	"/ignorelist",
 	"/invite",
 	"/join",
 	"/kick",
 	"/leave",
+	"/list",
 	"/me",
 	"/mode",
+	"/ms",
 	"/msg",
 	"/nick",
 	"/notice",
+	"/ns",
 	"/op",
+	"/os",
 	"/part",
 	"/query",
+	"/quote",
 	"/quit",
 	"/raw",
+	"/rejoin",
+	"/rs",
 	"/say",
 	"/send",
 	"/server",
 //	"/slap",
 	"/topic",
 	"/unban",
+	"/unignore",
 	"/voice",
-	"/whois"
-];
-
-const actionTypes = [
-	"ban_list",
-	"invite",
-	"join",
-	"mode",
-	"kick",
-	"nick",
-	"part",
-	"quit",
-	"topic",
-	"topic_set_by",
-	"action",
-	"whois",
-	"ctcp",
-	"channel_list",
+	"/whois",
 ];
 
 const condensedTypes = [
+	"away",
+	"back",
+	"chghost",
 	"join",
 	"part",
 //	"quit",
@@ -81,17 +85,17 @@ const condensedTypes = [
 	"kick",
 	"mode",
 ];
+const condensedTypesQuery = "." + condensedTypes.join(", .");
 
 const timeFormats = {
 	msgDefault: "HH:mm",
-	msgWithSeconds: "HH:mm:ss"
+	msgWithSeconds: "HH:mm:ss",
 };
 
 module.exports = {
-	colorCodeMap: colorCodeMap,
-	commands: commands,
-	condensedTypes: condensedTypes,
-	condensedTypesQuery: "." + condensedTypes.join(", ."),
-	actionTypes: actionTypes,
-	timeFormats: timeFormats
+	colorCodeMap,
+	commands,
+	condensedTypes,
+	condensedTypesQuery,
+	timeFormats,
 };

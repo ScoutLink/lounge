@@ -8,158 +8,187 @@ const utils = require("./utils");
 const sorting = require("./sorting");
 const constants = require("./constants");
 const condensed = require("./condensed");
+const JoinChannel = require("./join-channel");
+const helpers_parse = require("./libs/handlebars/parse");
+const Userlist = require("./userlist");
+const storage = require("./localStorage");
 
 const chat = $("#chat");
 const sidebar = $("#sidebar");
 
+require("intersection-observer");
+
+const historyObserver = window.IntersectionObserver ?
+	new window.IntersectionObserver(loadMoreHistory, {
+		root: chat.get(0),
+	}) : null;
+
 module.exports = {
 	appendMessage,
 	buildChannelMessages,
-	buildChatMessage,
 	renderChannel,
-	renderChannelMessages,
 	renderChannelUsers,
 	renderNetworks,
+	trimMessageInChannel,
 };
 
-function buildChannelMessages(data) {
-	return data.messages.reduce(function(docFragment, message) {
-		appendMessage(docFragment, data.id, data.type, message.type, buildChatMessage({
-			chan: data.id,
-			msg: message
-		}));
+function buildChannelMessages(container, chanId, chanType, messages) {
+	return messages.reduce((docFragment, message) => {
+		appendMessage(docFragment, chanId, chanType, message);
 		return docFragment;
-	}, $(document.createDocumentFragment()));
+	}, container);
 }
 
-function appendMessage(container, chan, chanType, messageType, msg) {
-	// TODO: To fix #1432, statusMessage option should entirely be implemented in CSS
-	if (constants.condensedTypes.indexOf(messageType) === -1 || chanType !== "channel" || options.statusMessages !== "condensed") {
-		container.append(msg);
+function appendMessage(container, chanId, chanType, msg) {
+	if (utils.lastMessageId < msg.id) {
+		utils.lastMessageId = msg.id;
+	}
+
+	let lastChild = container.children(".msg, .date-marker-container").last();
+	const renderedMessage = buildChatMessage(msg);
+
+	// Check if date changed
+	const msgTime = new Date(msg.time);
+	const prevMsgTime = new Date(lastChild.data("time"));
+
+	// Insert date marker if date changed compared to previous message
+	if (prevMsgTime.toDateString() !== msgTime.toDateString()) {
+		lastChild = $(templates.date_marker({time: msg.time}));
+		container.append(lastChild);
+	}
+
+	// If current window is not a channel or this message is not condensable,
+	// then just append the message to container and be done with it
+	if (msg.self || msg.highlight || constants.condensedTypes.indexOf(msg.type) === -1 || chanType !== "channel") {
+		container.append(renderedMessage);
 		return;
 	}
 
-	const lastChild = container.children("div.msg").last();
+	const obj = {};
+	obj[msg.type] = 1;
 
-	if (lastChild && $(lastChild).hasClass("condensed")) {
-		lastChild.append(msg);
-		condensed.updateText(lastChild, [messageType]);
-	} else if (lastChild && $(lastChild).is(constants.condensedTypesQuery)) {
-		const newCondensed = buildChatMessage({
-			chan: chan,
-			msg: {
-				type: "condensed",
-				time: msg.attr("data-time"),
-				previews: []
-			}
-		});
-
-		condensed.updateText(newCondensed, [messageType, lastChild.attr("data-type")]);
-		container.append(newCondensed);
-		newCondensed.append(lastChild);
-		newCondensed.append(msg);
-	} else {
-		container.append(msg);
+	// If the previous message is already condensed,
+	// we just append to it and update text
+	if (lastChild.hasClass("condensed")) {
+		lastChild.append(renderedMessage);
+		condensed.updateText(lastChild, obj);
+		return;
 	}
+
+	// Always create a condensed container
+	const newCondensed = $(templates.msg_condensed({time: msg.time}));
+
+	condensed.updateText(newCondensed, obj);
+	newCondensed.append(renderedMessage);
+	container.append(newCondensed);
 }
 
-function buildChatMessage(data) {
-	const type = data.msg.type;
+function buildChatMessage(msg) {
+	const type = msg.type;
 	let template = "msg";
 
 	// See if any of the custom highlight regexes match
-	if (!data.msg.highlight && !data.msg.self
+	if (!msg.highlight && !msg.self
 		&& options.highlightsRE
 		&& (type === "message" || type === "notice")
-		&& options.highlightsRE.exec(data.msg.text)) {
-		data.msg.highlight = true;
+		&& options.highlightsRE.exec(msg.text)) {
+		msg.highlight = true;
 	}
 
-	if (constants.actionTypes.indexOf(type) !== -1) {
-		data.msg.template = "actions/" + type;
+	if (typeof templates.actions[type] !== "undefined") {
 		template = "msg_action";
 	} else if (type === "unhandled") {
 		template = "msg_unhandled";
-	} else if (type === "condensed") {
-		template = "msg_condensed";
 	}
 
-	const msg = $(templates[template](data.msg));
-	const content = msg.find(".content");
+	// Make the MOTDs a little nicer if possible
+	if (msg.type === "motd") {
+		let lines = msg.text.split("\n");
+
+		// If all non-empty lines of the MOTD start with a hyphen (which is common
+		// across MOTDs), remove all the leading hyphens.
+		if (lines.every((line) => line === "" || line[0] === "-")) {
+			lines = lines.map((line) => line.substr(2));
+		}
+
+		// Remove empty lines around the MOTD (but not within it)
+		msg.text = lines
+			.map((line) => line.replace(/\s*$/, ""))
+			.join("\n")
+			.replace(/^[\r\n]+|[\r\n]+$/g, "");
+	}
+
+	const renderedMessage = $(templates[template](msg));
+	const content = renderedMessage.find(".content");
 
 	if (template === "msg_action") {
-		content.html(templates.actions[type](data.msg));
+		content.html(templates.actions[type](msg));
 	}
 
-	data.msg.previews.forEach((preview) => {
-		renderPreview(preview, msg);
+	msg.previews.forEach((preview) => {
+		renderPreview(preview, renderedMessage);
 	});
 
-	return msg;
+	return renderedMessage;
 }
 
 function renderChannel(data) {
 	renderChannelMessages(data);
 
 	if (data.type === "channel") {
-		renderChannelUsers(data);
+		const users = renderChannelUsers(data);
+
+		Userlist.handleKeybinds(users.find(".search"));
+	}
+
+	if (historyObserver) {
+		historyObserver.observe(chat.find("#chan-" + data.id + " .show-more").get(0));
 	}
 }
 
 function renderChannelMessages(data) {
-	const documentFragment = buildChannelMessages(data);
+	const documentFragment = buildChannelMessages($(document.createDocumentFragment()), data.id, data.type, data.messages);
 	const channel = chat.find("#chan-" + data.id + " .messages").append(documentFragment);
 
-	if (data.firstUnread > 0) {
-		const first = channel.find("#msg-" + data.firstUnread);
+	renderUnreadMarker($(templates.unread_marker()), data.firstUnread, channel);
+}
 
-		// TODO: If the message is far off in the history, we still need to append the marker into DOM
+function renderUnreadMarker(template, firstUnread, channel) {
+	if (firstUnread > 0) {
+		let first = channel.find("#msg-" + firstUnread);
+
 		if (!first.length) {
-			channel.prepend(templates.unread_marker());
-		} else if (first.parent().hasClass("condensed")) {
-			first.parent().before(templates.unread_marker());
+			template.data("unread-id", firstUnread);
+			channel.prepend(template);
 		} else {
-			first.before(templates.unread_marker());
+			const parent = first.parent();
+
+			if (parent.hasClass("condensed")) {
+				first = parent;
+			}
+
+			first.before(template);
 		}
 	} else {
-		channel.append(templates.unread_marker());
-	}
-
-	if (data.type !== "lobby") {
-		let lastDate;
-		$(chat.find("#chan-" + data.id + " .messages .msg[data-time]")).each(function() {
-			const msg = $(this);
-			const msgDate = new Date(msg.attr("data-time"));
-
-			// Top-most message in a channel
-			if (!lastDate) {
-				lastDate = msgDate;
-				msg.before(templates.date_marker({msgDate: msgDate}));
-			}
-
-			if (lastDate.toDateString() !== msgDate.toDateString()) {
-				var parent = msg.parent();
-				if (parent.hasClass("condensed")) {
-					msg.insertAfter(parent);
-				}
-				msg.before(templates.date_marker({msgDate: msgDate}));
-			}
-
-			lastDate = msgDate;
-		});
+		channel.append(template);
 	}
 }
 
 function renderChannelUsers(data) {
-	const users = chat.find("#chan-" + data.id).find(".users");
+	const users = chat.find("#chan-" + data.id).find(".userlist");
 	const nicks = data.users
 		.concat() // Make a copy of the user list, sort is applied in-place
 		.sort((a, b) => b.lastMessage - a.lastMessage)
 		.map((a) => a.nick);
 
+	// Before re-rendering the list of names, there might have been an entry
+	// marked as active (i.e. that was highlighted by keyboard navigation).
+	// It is `undefined` if there was none.
+	const previouslyActive = users.find(".active");
+
 	const search = users
 		.find(".search")
-		.attr("placeholder", nicks.length + " " + (nicks.length === 1 ? "user" : "users"));
+		.prop("placeholder", nicks.length + " " + (nicks.length === 1 ? "user" : "users"));
 
 	users
 		.data("nicks", nicks)
@@ -170,31 +199,92 @@ function renderChannelUsers(data) {
 	if (search.val().length) {
 		search.trigger("input");
 	}
+
+	// If a nick was highlighted before re-rendering the lists, re-highlight it in
+	// the newly-rendered list.
+	if (previouslyActive.length > 0) {
+		// We need to un-highlight everything first because triggering `input` with
+		// a value highlights the first entry.
+		users.find(".user").removeClass("active");
+		users.find(`.user[data-name="${previouslyActive.attr("data-name")}"]`).addClass("active");
+	}
+
+	return users;
 }
 
-function renderNetworks(data) {
+function renderNetworks(data, singleNetwork) {
+	const collapsed = new Set(JSON.parse(storage.get("thelounge.networks.collapsed")));
+
 	sidebar.find(".empty").hide();
 	sidebar.find(".networks").append(
 		templates.network({
-			networks: data.networks
-		})
+			networks: data.networks,
+		}).trim()
 	);
 
+	// Add keyboard handlers to the "Join a channel…" form inputs/button
+	JoinChannel.handleKeybinds(data.networks);
+
+	let newChannels;
 	const channels = $.map(data.networks, function(n) {
+		if (collapsed.has(n.uuid)) {
+			collapseNetwork($(`.network[data-uuid="${n.uuid}"] button.collapse-network`));
+		}
+
 		return n.channels;
 	});
-	chat.append(
-		templates.chat({
-			channels: channels
-		})
-	);
-	channels.forEach((channel) => {
-		renderChannel(channel);
 
-		if (channel.type === "channel") {
-			chat.find("#chan-" + channel.id).data("needsNamesRefresh", true);
-		}
-	});
+	if (!singleNetwork && utils.lastMessageId > -1) {
+		newChannels = [];
+
+		channels.forEach((channel) => {
+			const chan = $("#chan-" + channel.id);
+
+			if (chan.length > 0) {
+				if (chan.data("type") === "channel") {
+					chan
+						.data("needsNamesRefresh", true)
+						.find(".header .topic")
+						.html(helpers_parse(channel.topic))
+						.prop("title", channel.topic);
+				}
+
+				if (channel.messages.length > 0) {
+					const container = chan.find(".messages");
+					buildChannelMessages(container, channel.id, channel.type, channel.messages);
+
+					const unreadMarker = container.find(".unread-marker").data("unread-id", 0);
+					renderUnreadMarker(unreadMarker, channel.firstUnread, container);
+
+					if (container.find(".msg").length >= 100) {
+						container.find(".show-more").addClass("show");
+					}
+
+					container.parent().trigger("keepToBottom");
+				}
+			} else {
+				newChannels.push(channel);
+			}
+		});
+	} else {
+		newChannels = channels;
+	}
+
+	if (newChannels.length > 0) {
+		chat.append(
+			templates.chat({
+				channels: newChannels,
+			})
+		);
+
+		newChannels.forEach((channel) => {
+			renderChannel(channel);
+
+			if (channel.type === "channel") {
+				chat.find("#chan-" + channel.id).data("needsNamesRefresh", true);
+			}
+		});
+	}
 
 	utils.confirmExit();
 	sorting();
@@ -202,4 +292,68 @@ function renderNetworks(data) {
 	if (sidebar.find(".highlight").length) {
 		utils.toggleNotificationMarkers(true);
 	}
+}
+
+function trimMessageInChannel(channel, messageLimit) {
+	const messages = channel.find(".messages .msg").slice(0, -messageLimit);
+
+	if (messages.length === 0) {
+		return;
+	}
+
+	messages.remove();
+
+	channel.find(".show-more").addClass("show");
+
+	// Remove date-separators that would otherwise be "stuck" at the top of the channel
+	channel.find(".date-marker-container").each(function() {
+		if ($(this).next().hasClass("date-marker-container")) {
+			$(this).remove();
+		}
+	});
+}
+
+function loadMoreHistory(entries) {
+	entries.forEach((entry) => {
+		if (!entry.isIntersecting) {
+			return;
+		}
+
+		const target = $(entry.target).find("button");
+
+		if (target.prop("disabled")) {
+			return;
+		}
+
+		target.trigger("click");
+	});
+}
+
+sidebar.on("click", "button.collapse-network", (e) => collapseNetwork($(e.target)));
+
+function collapseNetwork(target) {
+	const collapseButton = target.closest(".collapse-network");
+	const networks = new Set(JSON.parse(storage.get("thelounge.networks.collapsed")));
+	const networkuuid = collapseButton.closest(".network").data("uuid");
+
+	if (collapseButton.closest(".network").find(".active").length > 0) {
+		collapseButton.closest(".lobby").trigger("click", {
+			keepSidebarOpen: true,
+		});
+	}
+
+	collapseButton.closest(".network").toggleClass("collapsed");
+
+	if (collapseButton.attr("aria-expanded") === "true") {
+		collapseButton.attr("aria-expanded", false);
+		collapseButton.attr("aria-label", "Expand");
+		networks.add(networkuuid);
+	} else {
+		collapseButton.attr("aria-expanded", true);
+		collapseButton.attr("aria-label", "Collapse");
+		networks.delete(networkuuid);
+	}
+
+	storage.set("thelounge.networks.collapsed", JSON.stringify([...networks]));
+	return false;
 }
