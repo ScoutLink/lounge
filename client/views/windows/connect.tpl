@@ -4,14 +4,14 @@
 <form class="container" method="post" action="" data-event="{{#if defaults.uuid}}network:edit{{else}}network:new{{/if}}">
 	<div class="row">
 		<div class="col-sm-12">
+			<img src="img/sl-badge.png" alt="ScoutLink Badge">
 			<h1 class="title">
 				{{#if defaults.uuid}}
 					<input type="hidden" name="uuid" value="{{defaults.uuid}}">
 
 					Edit {{defaults.name}}
 				{{else}}
-					{{#if public}}The Lounge - {{/if}}
-					Connect
+					{{#if public}}Welcome {{/if}}
 					{{#unless displayNetwork}}
 						{{#if lockNetwork}}
 						to {{defaults.name}}
@@ -19,10 +19,9 @@
 					{{/unless}}
 				{{/if}}
 			</h1>
-			<div>Type a nickname in the nick box below and click connect to instantly chat to Scouts and Guides from around the world!</div>
+			<p>Type a nickname in the nick box below and click connect to instantly chat to Scouts and Guides from around the world!</p>
 
-			<div><b>Disclaimer</b>: By connecting to ScoutLink you confirm you have read and agree to follow our <a href="https://scoutlink.net/rules">Rules</a> and <a href="https://scoutlink.net/safety">Safety</a> information.</div>
-
+			<p><b>Disclaimer</b>: By connecting to ScoutLink you confirm you have read and agree to follow our <a href="https://scoutlink.net/rules">Rules</a> and <a href="https://scoutlink.net/safety">Safety</a> information.</p>
 
 		</div>
 	{{#if displayNetwork}}
@@ -80,10 +79,10 @@
 			<input class="input username" id="connect:username" name="username" value="{{defaults.username}}">
 		</div>
 	{{/unless}}
-		<div class="col-sm-3">
+		<div class="col-sm-3" style="display: none">
 			<label for="connect:password">Password</label>
 		</div>
-		<div class="col-sm-9 password-container">
+		<div class="col-sm-9 password-container" style="display: none">
 			<input class="input" id="connect:password" type="password" name="password" value="{{defaults.password}}">
 			{{> ../reveal-password}}
 		</div>
