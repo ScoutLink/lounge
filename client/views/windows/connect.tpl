@@ -110,10 +110,7 @@
 		</div>
 		<div class="col-sm-9">
 			<select class="input" id="connect:channels" name="join">
-				<optgroup label="Test">
-					<option value="#test">Test</option>
-				</optgroup>
-				<optgroup label="English">
+				<optgroup label="Defaults">
 					<option value="#english">English</option>
 					<option value="#help">Help</option>
 				</optgroup>
@@ -133,17 +130,18 @@
 					<option value="#scandinavia">Scandinavia</option>
 					<option value="#suomi">Suomi</option>
 				</optgroup>
-				<optgroup label="Entertaining">
+				<optgroup label="Entertainment">
 					<option value="#english-Trivia">Trivia (English)</option>
 					<option value="#leaders">Leaders</option>
 					<option value="#minecraft">Minecraft</option>
 					<option value="#uno">Uno</option>
 					<option value="#youth">Youth</option>
 				</optgroup>
-				<optgroup label="End">
+				<optgroup label="Miscellaneous">
 					<option value="">Do not join a channel</option>
+					<option value="#test">Test</option>
 				</optgroup>
-				{{~#each defaults.channels~}} <option value="{{~this}}">{{~this}}</option>
+				{{~#each defaults.channels.name~}} <option value="{{~this}}">{{~this}}</option>
 				{{/each~}}
 			</select>
 		</div>
