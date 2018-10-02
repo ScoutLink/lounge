@@ -72,10 +72,10 @@
 			<input class="input nick" id="connect:nick" name="nick" value="{{defaults.nick}}" required>
 		</div>
 	{{#unless useHexIp}}
-		<div class="col-sm-3">
+		<div class="col-sm-3" style="display: none">
 			<label for="connect:username">Username</label>
 		</div>
-		<div class="col-sm-9">
+		<div class="col-sm-9" style="display: none">
 			<input class="input username" id="connect:username" name="username" value="{{defaults.username}}">
 		</div>
 	{{/unless}}
