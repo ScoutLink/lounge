@@ -81,9 +81,6 @@
 			<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Settings"><button
 						class="icon settings" data-target="#settings" aria-label="Settings" role="tab"
 						aria-controls="settings" aria-selected="false"></button></span>
-			<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Download Logs"><button
-						class="icon logging" data-target="#logging" aria-label="Logging" role="tab"
-						aria-controls="logging" aria-selected="false"></button></span>
 			<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Help"><button class="icon help"
 																								data-target="#help"
 																								aria-label="Help"
