@@ -108,6 +108,10 @@ const config = {
 				to: "js/[name].[ext]",
 			},
 			{
+				from: "./client/js/langchoose.js",
+				to: "js/[name].[ext]",
+			},
+			{
 				from: "./client/*",
 				to: "[name].[ext]",
 				ignore: "index.html.tpl",

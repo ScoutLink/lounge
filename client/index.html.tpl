@@ -7,12 +7,8 @@
 
 	<link rel="preload" as="script" href="js/bundle.vendor.js">
 	<link rel="preload" as="script" href="js/bundle.js">
-	<!-- we probably don't need jquery, but picknick.js is jqueried up the wazoo -->
-	<script src="js/jquery-3.3.1.min.js"></script>
-	<!--<script defer src="js/picknick.js"></script>-->
+
 	<script defer src="js/langchoose.js"></script>
-	<script defer src="js/filesaver.js"></script>
-	<script defer src="js/logging.js"></script>
 
 
 	<link rel="stylesheet" href="css/primer-tooltips.css">
