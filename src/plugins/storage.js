@@ -1,5 +1,6 @@
 "use strict";
 
+const log = require("../log");
 const fs = require("fs");
 const fsextra = require("fs-extra");
 const path = require("path");
@@ -9,7 +10,9 @@ const helper = require("../helper");
 class Storage {
 	constructor() {
 		this.references = new Map();
+	}
 
+	emptyDir() {
 		// Ensures that a directory is empty.
 		// Deletes directory contents if the directory is not empty.
 		// If the directory does not exist, it is created.
