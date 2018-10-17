@@ -4,47 +4,6 @@
 <div class="container">
 	<h1 class="title">Help</h1>
 
-	<h2>
-		<small class="pull-right">
-			v{{version}}
-			(<a href="#" id="view-changelog" data-target="#changelog">release notes</a>)
-		</small>
-		About The Lounge
-	</h2>
-
-	<div class="about">
-		<div id="version-checker"></div>
-
-		{{#if gitCommit}}
-			<p>
-				The Lounge is running from source
-				(<a href="https://github.com/thelounge/thelounge/tree/{{gitCommit}}" target="_blank" rel="noopener">commit <code>{{gitCommit}}</code></a>).
-			</p>
-
-			<ul>
-				<li>
-					Compare
-					<a href="https://github.com/thelounge/thelounge/compare/{{gitCommit}}...master" target="_blank" rel="noopener">between <code>{{gitCommit}}</code> and <code>master</code></a>
-					to see what you are missing
-				</li>
-				<li>
-					Compare
-					<a href="https://github.com/thelounge/thelounge/compare/{{version}}...{{gitCommit}}" target="_blank" rel="noopener">between <code>{{version}}</code> and <code>{{gitCommit}}</code></a>
-					to see your local changes</li>
-			</ul>
-		{{/if}}
-
-		<p>
-			<a href="https://thelounge.chat/" target="_blank" rel="noopener" class="website-link">Website</a>
-		</p>
-		<p>
-			<a href="https://thelounge.chat/docs/" target="_blank" rel="noopener" class="documentation-link">Documentation</a>
-		</p>
-		<p>
-			<a href="https://github.com/thelounge/thelounge/issues/new" target="_blank" rel="noopener" class="report-issue-link">Report an issue…</a>
-		</p>
-	</div>
-
 	<h2>Keyboard Shortcuts</h2>
 
 	<div class="help-item">
@@ -243,82 +202,12 @@
 
 	<div class="help-item">
 		<div class="subject">
-			<code>/ban nick</code>
-		</div>
-		<div class="description">
-			<p>Ban (<code>+b</code>) a user from the current channel.
-			This can be a nickname or a hostmask.</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/banlist</code>
-		</div>
-		<div class="description">
-			<p>Load the banlist for the current channel.</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
 			<code>/collapse</code>
 		</div>
 		<div class="description">
 			<p>
 				Collapse all previews in the current channel (opposite of
 				<code>/expand</code>)
-			</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/connect host [port]</code>
-		</div>
-		<div class="description">
-			<p>
-				Connect to a new IRC network. If <code>port</code> starts with
-				a <code>+</code> sign, the connection will be made secure
-				using TLS.
-			</p>
-			<p>Alias: <code>/server</code></p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/ctcp target cmd [args]</code>
-		</div>
-		<div class="description">
-			<p>
-				Send a <abbr title="Client-to-client protocol">CTCP</abbr>
-				request. Read more about this on
-				<a href="https://en.wikipedia.org/wiki/Client-to-client_protocol" target="_blank" rel="noopener">the dedicated Wikipedia article</a>.
-			</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/deop nick [...nick]</code>
-		</div>
-		<div class="description">
-			<p>
-				Remove op (<code>-o</code>) from one or several users in the
-				current channel.
-			</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/devoice nick [...nick]</code>
-		</div>
-		<div class="description">
-			<p>
-				Remove voice (<code>-v</code>) from one or several users in
-				the current channel.
 			</p>
 		</div>
 	</div>
@@ -343,19 +232,6 @@
 			<p>
 				Expand all previews in the current channel (opposite of
 				<code>/collapse</code>)
-			</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/invite nick [channel]</code>
-		</div>
-		<div class="description">
-			<p>
-				Invite a user to the specified channel. If
-				<code>channel</code> is ommitted, user will be invited to the
-				current channel.
 			</p>
 		</div>
 	</div>
@@ -391,15 +267,6 @@
 
 	<div class="help-item">
 		<div class="subject">
-			<code>/kick nick</code>
-		</div>
-		<div class="description">
-			<p>Kick a user from the current channel.</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
 			<code>/list</code>
 		</div>
 		<div class="description">
@@ -413,23 +280,9 @@
 		</div>
 		<div class="description">
 			<p>
-				Send an action message to the current channel. The Lounge will
+				Send an action message to the current channel. ScoutLink Webchat will
 				display it inline, as if the message was posted in the third
 				person.
-			</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/mode flags [args]</code>
-		</div>
-		<div class="description">
-			<p>
-				Set the given flags to the current channel if the active
-				window is a channel, another user if the active window is a
-				private message window, or yourself if the current window is a
-				server window.
 			</p>
 		</div>
 	</div>
@@ -449,27 +302,6 @@
 		</div>
 		<div class="description">
 			<p>Change your nickname on the current network.</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/notice channel message</code>
-		</div>
-		<div class="description">
-			<p>Sends a notice message to the specified channel.</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/op nick [...nick]</code>
-		</div>
-		<div class="description">
-			<p>
-				Give op (<code>+o</code>) to one or several users in the
-				current channel.
-			</p>
 		</div>
 	</div>
 
@@ -521,43 +353,12 @@
 
 	<div class="help-item">
 		<div class="subject">
-			<code>/raw message</code>
-		</div>
-		<div class="description">
-			<p>Send a raw message to the current IRC network.</p>
-			<p>Aliases: <code>/quote</code>, <code>/send</code></p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/slap nick</code>
-		</div>
-		<div class="description">
-			<p>Slap someone in the current channel with a trout!</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/topic [newtopic]</code>
+			<code>/topic</code>
 		</div>
 		<div class="description">
 			<p>
-				Get the topic in the current channel. 
-				If <code>newtopic</code> is specified, sets the 
-				topic in the current channel.
+				Get the topic in the current channel.
 			</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/unban nick</code>
-		</div>
-		<div class="description">
-			<p>Unban (<code>-b</code>) a user from the current channel.
-				This can be a nickname or a hostmask.</p>
 		</div>
 	</div>
 
@@ -569,18 +370,6 @@
 			<p>
 				Unblock messages from the specified user on the current network.
 				This can be a nickname or a hostmask.</p>
-		</div>
-	</div>
-
-	<div class="help-item">
-		<div class="subject">
-			<code>/voice nick [...nick]</code>
-		</div>
-		<div class="description">
-			<p>
-				Give voice (<code>+v</code>) to one or several users in the
-				current channel.
-			</p>
 		</div>
 	</div>
 
