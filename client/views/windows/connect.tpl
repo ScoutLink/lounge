@@ -119,6 +119,7 @@
 		<div class="col-sm-9">
 			<select class="input" id="connect:channels" name="join">
 				<optgroup label="Defaults">
+					<option value="#english">English</option>
 					<option value="#help">Help</option>
 				</optgroup>
 				<optgroup label="Regional">
