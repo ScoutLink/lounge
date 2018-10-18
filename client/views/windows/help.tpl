@@ -384,4 +384,6 @@
 			</p>
 		</div>
 	</div>
+		<p>Webchat powered by <a href="https://thelounge.github.io">TheLounge</a>, a free web-based IRC client
+		released under the MIT license.</p>
 </div>
