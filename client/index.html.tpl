@@ -8,7 +8,7 @@
 	<link rel="preload" as="script" href="js/bundle.vendor.js">
 	<link rel="preload" as="script" href="js/bundle.js">
 
-	<script defer src="js/langchoose.js"></script>
+	<!-- <script defer src="js/langchoose.js"></script> -->
 
 
 	<link rel="stylesheet" href="css/primer-tooltips.css">
