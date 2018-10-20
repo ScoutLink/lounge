@@ -139,6 +139,9 @@
 					<option value="#scandinavia">Scandinavia</option>
 					<option value="#suomi">Suomi</option>
 				</optgroup>
+				<optgroup label="Q&A Sessions">
+                                        <option value="#qa">ScoutLink Q&A</option>
+                                </optgroup>
 				<optgroup label="Entertainment">
 					<option value="#english-Trivia">Trivia (English)</option>
 					<option value="#leaders">Leaders</option>
