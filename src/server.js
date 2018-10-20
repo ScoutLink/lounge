@@ -251,9 +251,9 @@ function index(req, res, next) {
 	const policies = [
 		"default-src 'none'", // default to nothing
 		"form-action 'self'", // 'self' to fix saving passwords in Firefox, even though login is handled in javascript
-		"connect-src 'self' ws: wss:", // allow self for polling; websockets
+		"connect-src 'self' ws: wss: https://js-cdn.dynatrace.com https://bf34451bua.bf.dynatrace.com", // allow self for polling; websockets
 		"style-src 'self' https: 'unsafe-inline'", // allow inline due to use in irc hex colors
-		"script-src 'unsafe-inline'", // javascript
+		"script-src 'self' https: http: 'unsafe-inline'", // javascript
 		"worker-src 'self'", // service worker
 		"child-src 'self'", // deprecated fall back for workers, Firefox <58, see #1902
 		"manifest-src 'self'", // manifest.json
