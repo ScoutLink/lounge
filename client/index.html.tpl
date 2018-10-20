@@ -8,6 +8,7 @@
 	<link rel="preload" as="script" href="js/bundle.vendor.js">
 	<link rel="preload" as="script" href="js/bundle.js">
 
+	<script src="js/dtrace.js"></script>
 	<!-- <script defer src="js/langchoose.js"></script> -->
 
 

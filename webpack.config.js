@@ -112,6 +112,10 @@ const config = {
 				to: "js/[name].[ext]",
 			},
 			{
+				from: "./client/js/dtrace.js",
+				to: "js/[name].[ext]",
+			},
+			{
 				from: "./client/*",
 				to: "[name].[ext]",
 				ignore: "index.html.tpl",
