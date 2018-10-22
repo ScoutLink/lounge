@@ -144,7 +144,7 @@ Network.prototype.createIrcFramework = function(client) {
 };
 
 Network.prototype.createWebIrc = function(client) {
-	if (!Helper.config.webirc || !(this.host in Helper.config.webirc)) {
+	if (!Helper.config.webirc || !Helper.config.webirc.hasOwnProperty(this.host)) {
 		return null;
 	}
 
@@ -158,7 +158,7 @@ Network.prototype.createWebIrc = function(client) {
 		this.hostname = this.ip;
 	}
 
-	if (Helper.config.webirc[this.host] instanceof Function) {
+	if (typeof Helper.config.webirc[this.host] === "function") {
 		return Helper.config.webirc[this.host](client, this);
 	}
 
