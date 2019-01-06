@@ -121,6 +121,9 @@
 					<option value="#english">English</option>
 					<option value="#help">Help</option>
 				</optgroup>
+				<optgroup label="Special Events">
+					<option value="#aventura2019">Aventura Nacional 2019</option>
+				</optgroup>
 				<optgroup label="Regional">
 					<option value="#arabics">Arabics</option>
 					<option value="#chinese">Chinese</option>
@@ -138,12 +141,14 @@
 					<option value="#scandinavia">Scandinavia</option>
 					<option value="#suomi">Suomi</option>
 				</optgroup>
-				<optgroup label="Entertainment">
-					<option value="#english-Trivia">Trivia (English)</option>
-					<option value="#leaders">Leaders</option>
+				<optgroup label="Age specific">
+					<option value="#leaders">Leaders (for adult Leaders/volunteers)</option>
+                                        <option value="#youth">Youth (for youth members aged 14+)</option>
+				</optgroup>
+				<optgroup label="Games">
 					<option value="#minecraft">Minecraft</option>
-					<option value="#uno">Uno</option>
-					<option value="#youth">Youth</option>
+					<option value="#youth-werewolf">Werewolf Game</option>
+					<option value="#uno" disabled>Uno (currently unavailable)</option>
 				</optgroup>
 				<optgroup label="Miscellaneous">
 					<option value="">Do not join a channel</option>
