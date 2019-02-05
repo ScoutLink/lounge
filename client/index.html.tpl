@@ -51,64 +51,49 @@
 	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="theme-color" content="<%- themeColor %>">
 
-</head>
-<body class="signed-out<%- public ? " public" : "" %>" data-transports="<%- JSON.stringify(transports) %>">
-<div id="viewport" role="tablist">
-	<aside id="sidebar">
-		<div class="scrollable-area">
-			<div class="logo-container">
-				<img src="img/sl-badge.png" class="logo" alt="ScoutLink Badge">
-				<img src="img/sl-badge.png" class="logo-inverted" alt="ScoutLink Badge">
-			</div>
-			<div class="networks"></div>
-			<div class="empty">
-				You are not connected to any networks yet.
-			</div>
-		</div>
-		<footer id="footer">
-			<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Sign in"><button class="icon sign-in"
-																								   data-target="#sign-in"
-																								   aria-label="Sign in"
-																								   role="tab"
-																								   aria-controls="sign-in"
-																								   aria-selected="false"></button></span>
-			<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Connect to network"><button
-						class="icon connect" data-target="#connect" aria-label="Connect to network" role="tab"
-						aria-controls="connect" aria-selected="false"></button></span>
-			<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Settings"><button
-						class="icon settings" data-target="#settings" aria-label="Settings" role="tab"
-						aria-controls="settings" aria-selected="false"></button></span>
-			<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Help"><button class="icon help"
-																								data-target="#help"
-																								aria-label="Help"
-																								role="tab"
-																								aria-controls="help"
-																								aria-selected="false"></button></span>
-		</footer>
-	</aside>
-	<div id="sidebar-overlay"></div>
-	<article id="windows">
-		<div id="loading" class="window active">
-			<div id="loading-status-container">
-				<img src="img/sl-badge.png" class="logo" alt="ScoutLink Badge" width="189" height="189">
-				<img src="img/sl-badge.png" class="logo-inverted" alt="ScoutLink Badge" width="189" height="189">
-				<p id="loading-page-message"><a href="https://enable-javascript.com/" target="_blank" rel="noopener">Your
-						JavaScript must be enabled.</a></p>
-			</div>
-			<div id="loading-reload-container">
-				<p id="loading-slow">This is taking longer than it should, there might be connectivity issues.</p>
-				<button id="loading-reload" class="btn">Reload page</button>
-			</div>
-			<script async src="js/loading-error-handlers.js"></script>
-		</div>
-		<div id="chat-container" class="window">
-			<div id="chat"></div>
-			<div id="connection-error"></div>
-			<span id="upload-progressbar"></span>
-			<form id="form" method="post" action="">
-				<span id="nick"></span>
-				<textarea id="input" class="mousetrap"></textarea>
-				<span id="upload-tooltip" class="tooltipped tooltipped-w tooltipped-no-touch" aria-label="Upload File">
+	</head>
+	<body class="signed-out<%- public ? " public" : "" %>" data-transports="<%- JSON.stringify(transports) %>">
+		<div id="viewport" role="tablist">
+			<aside id="sidebar">
+				<div class="scrollable-area">
+					<div class="logo-container">
+						<img src="img/sl-badge.png" class="logo" alt="ScoutLink Badge">
+						<img src="img/sl-badge.png" class="logo-inverted" alt="ScoutLink Badge">
+					</div>
+					<div class="networks"></div>
+					<div class="empty">
+						You are not connected to any networks yet.
+					</div>
+				</div>
+				<footer id="footer">
+					<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Sign in"><button class="icon sign-in" data-target="#sign-in" aria-label="Sign in" role="tab" aria-controls="sign-in" aria-selected="false"></button></span>
+					<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Connect to network"><button class="icon connect" data-target="#connect" aria-label="Connect to network" role="tab" aria-controls="connect" aria-selected="false"></button></span>
+					<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Settings"><button class="icon settings" data-target="#settings" aria-label="Settings" role="tab" aria-controls="settings" aria-selected="false"></button></span>
+					<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Help"><button class="icon help" data-target="#help" aria-label="Help" role="tab" aria-controls="help" aria-selected="false"></button></span>
+				</footer>
+			</aside>
+			<div id="sidebar-overlay"></div>
+			<article id="windows">
+				<div id="loading" class="window active">
+					<div id="loading-status-container">
+						<img src="img/sl-badge.png" class="logo" alt="ScoutLink Badge" width="189" height="189">
+						<img src="img/sl-badge.png" class="logo-inverted" alt="ScoutLink Badge" width="189" height="189">
+						<p id="loading-page-message"><a href="https://enable-javascript.com/" target="_blank" rel="noopener">Your JavaScript must be enabled.</a></p>
+					</div>
+					<div id="loading-reload-container">
+						<p id="loading-slow">This is taking longer than it should, there might be connectivity issues.</p>
+						<button id="loading-reload" class="btn">Reload page</button>
+					</div>
+					<script async src="js/loading-error-handlers.js"></script>
+				</div>
+				<div id="chat-container" class="window">
+					<div id="chat"></div>
+					<div id="connection-error"></div>
+					<span id="upload-progressbar"></span>
+					<form id="form" method="post" action="">
+						<span id="nick"></span>
+						<textarea id="input" class="mousetrap"></textarea>
+						<span id="upload-tooltip" class="tooltipped tooltipped-w tooltipped-no-touch" aria-label="Upload file">
 							<input id="upload-input" type="file" multiple>
 							<button id="upload" type="button" aria-label="Upload file"></button>
 						</span>

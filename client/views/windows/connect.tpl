@@ -122,7 +122,7 @@
 					<option value="#help">Help</option>
 				</optgroup>
 				<optgroup label="Special Events">
-					<option value="#aventura2019">Aventura Nacional 2019</option>
+					<option value="#guaitioree2019">Guaitioree 2019</option>
 				</optgroup>
 				<optgroup label="Regional">
 					<option value="#arabics">Arabics</option>
