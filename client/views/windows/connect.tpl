@@ -122,7 +122,6 @@
 					<option value="#help">Help</option>
 				</optgroup>
 				<optgroup label="Special Events">
-					<option value="#guaitioree2019">Guaitioree 2019</option>
 					<option value="#radioscout">Radio Scout</option>
 				</optgroup>
 				<optgroup label="Regional">
