@@ -147,8 +147,8 @@
 				</optgroup>
 				<optgroup label="Games">
 					<option value="#minecraft">Minecraft</option>
-					<option value="#youth-werewolf">Werewolf Game</option>
-					<option value="#uno" disabled>Uno (currently unavailable)</option>
+					<option value="#werewolf">Werewolf</option>
+					<option value="#uno">Uno</option>
 				</optgroup>
 				<optgroup label="Miscellaneous">
 					<option value="">Do not join a channel</option>
